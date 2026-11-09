@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "creator-scorer"
+version = "1.0.0"
+description = "Explainable, cohort-relative creator quality scoring with heuristic authenticity signals and CPM/CPE"
+authors = [
+  { name = "SriRamKunamsetty", email = "mohansriramkunamsetty@gmail.com" }
+]
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+
+[project.scripts]
+creatorscore = "creatorscore.cli:main"
+
+[tool.setuptools.package-data]
+creatorscore = ["schema.sql"]
