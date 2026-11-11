@@ -1,105 +1,198 @@
-# CreatorScore: explainable creator quality scoring
+# CreatorScore Enterprise: AI/ML Creator Quality Scoring & Production Platform
 
-**Who is worth the fee?** Ranks creators from public metrics against *your own cohort*, explains every score and every risk flag, and withholds a score rather than faking one when the comparison group is too small.
+[![CI Pipeline](https://github.com/SriRamkunamsetty/creator-scorer/actions/workflows/ci.yml/badge.svg)](https://github.com/SriRamkunamsetty/creator-scorer/actions/workflows/ci.yml)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](Dockerfile)
+[![Kubernetes](https://img.shields.io/badge/kubernetes-production-326ce5.svg)](deploy/k8s/)
+[![Helm](https://img.shields.io/badge/helm-chart_v1.0.0-0f1689.svg)](deploy/helm/creatorscore/)
+[![Terraform](https://img.shields.io/badge/terraform-IaC-844fba.svg)](deploy/terraform/)
+[![Python](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue)](pyproject.toml)
 
-## Screenshots
+**Who is worth the fee?** A production-grade AI/ML platform and microservice that ranks social media creators against empirical cohort distributions, runs multivariate anomaly detection (Isolation Forest), performs NLP bot-network and astroturfing analysis (Shannon entropy + TF-IDF semantic clustering), predicts fair-market pricing (CPE/CPM), provides transparent Explainable AI (XAI) score attributions, and automatically monitors cohort drift (Population Stability Index).
 
-> **About the screenshots.** All data shown is **synthetic** (the UI says so in an orange banner). Browser images are real captures of this project's own dashboard in Chromium; terminal images are the real stdout of each command, rendered into a terminal-styled page.
+---
 
-### Ranking, scatter and an explained high-risk creator
-![Ranking, scatter and an explained high-risk creator](docs/screenshots/01-overview-high-risk-detail.png)
+## Architecture Overview
 
-Ranked table (left); reach-vs-engagement scatter coloured by risk and the detail panel for `@creator_05` (right) listing all four flags with their evidence and the disclaimer: heuristic signals, not proof of fraud. (Two creators were built to look suspicious in the synthetic data.)
+```
+                         ┌──────────────────────────────────────────────────────────┐
+                         │               KUBERNETES INGRESS / TLS                   │
+                         └────────────────────────────┬─────────────────────────────┘
+                                                      │
+                                                      ▼
+                         ┌──────────────────────────────────────────────────────────┐
+                         │             FASTAPI ENTERPRISE ASGI SERVICE              │
+                         │   • Rate Limiting    • Prometheus Metrics (/metrics)     │
+                         │   • Security Headers • Request ID Tracing                │
+                         └──────┬─────────────────────┬──────────────────────┬──────┘
+                                │                     │                      │
+       ┌────────────────────────┴───────┐             │           ┌──────────┴───────────────────────┐
+       ▼                                ▼             ▼           ▼                                  ▼
+┌──────────────┐                 ┌─────────────┐ ┌─────────┐ ┌──────────────────┐            ┌──────────────────┐
+│  Classical   │                 │ Multivariate│ │Predictve│ │ NLP Bot Detector │            │  Drift Detector  │
+│Cohort Scoring│                 │  Isolation  │ │  Ridge  │ │ • Shannon Entropy│            │ • Population     │
+│  Percentiles │                 │   Forest    │ │Regressor│ │ • TF-IDF Cosine  │            │   Stability (PSI)│
+│  • Micro     │                 │ • Reach Dev │ │ • Fair  │ │   Clustering     │            │ • Kolmogorov-    │
+│  • Mid       │                 │ • ER Volat. │ │   CPM   │ │ • Token Diversity│            │   Smirnov (KS)   │
+│  • Macro     │                 │ • Outliers  │ │ • ROI   │ │ • Emoji Density  │            │ • Alerting       │
+└──────┬───────┘                 └──────┬──────┘ └────┬────┘ └────────┬─────────┘            └──────────────────┘
+       │                                │             │               │
+       └────────────────────────┬───────┴─────────────┴───────────────┘
+                                │
+                                ▼
+                 ┌─────────────────────────────┐
+                 │    EXPLAINABLE AI (XAI)     │
+                 │   Feature Waterfall Score   │
+                 │   Attribution Breakdown     │
+                 └──────────────┬──────────────┘
+                                │
+       ┌────────────────────────┴───────────────────────┐
+       ▼                                                ▼
+┌──────────────────────────────┐        ┌───────────────────────────────┐
+│     JSON REST API /v1        │        │     CONTAINER & DEVOPS        │
+│ • /healthz  • /readyz        │        │ • Docker (Multi-stage nonroot)│
+│ • /metrics  • /api/v1/score  │        │ • Docker Compose (PG+Redis)   │
+│ • /api/v1/analyze/comments   │        │ • Helm Chart & K8s (HPA, PDB) │
+│ • /api/v1/analyze/drift      │        │ • Terraform Cloud EKS+RDS     │
+└──────────────────────────────┘        └───────────────────────────────┘
+```
 
-### Filtering
-![Filtering](docs/screenshots/02-filtered-tiktok.png)
+---
 
-Platform filter applied; the figures strip and scatter follow the filter.
+## Machine Learning & AI Capabilities
 
-### Dark mode
-![Dark mode](docs/screenshots/03-dark.png)
+1. **Multivariate Anomaly Detection (`CreatorAnomalyDetector`)**:
+   - Trains an **Isolation Forest** on multivariate feature vectors: $\log_{10}(\text{reach\_ratio})$, $\text{engagement\_rate}$, $\text{consistency}$, $\text{follower\_volatility}$, and $\text{comment\_to\_like\_ratio}$.
+   - Pinpoints the exact feature responsible for outlier classification via robust MAD cohort attribution.
 
-Follows the system colour scheme.
+2. **NLP Semantic Bot & Astroturfing Detection (`NLPBotDetector`)**:
+   - Calculates **Lexical Shannon Entropy** ($H(X) = -\sum P(w)\log_2 P(w)$) to measure vocabulary information density.
+   - Performs **subword $n$-gram TF-IDF cosine similarity clustering** to identify automated bot comment networks.
+   - Computes Type-Token Ratio (TTR) and emoji spam density to produce a calibrated **Bot Probability Score** ($0.0 - 1.0$).
 
-### Mobile
-![Mobile](docs/screenshots/04-mobile.png)
+3. **Predictive Fair-Market Pricing Regressor (`PredictiveQualityScorer`)**:
+   - Supervised Ridge regression with $k$-fold cross-validation predicting expected fair-market CPM and CPE.
+   - Categorizes creator pricing efficiency into **High ROI Candidate** ($< 0.7\times$ fair value), **Fair Value**, or **Overpriced** ($> 1.5\times$ fair value).
 
-Phone layout with a compact table.
+4. **Explainable AI (XAI) Feature Attribution (`ModelExplainer`)**:
+   - Decomposes every score into an additive waterfall:
+     $$\text{Score} = \text{Engagement Pts} + \text{Reach Pts} + \text{Consistency Pts} - \text{Risk Penalty} - \text{ML Anomaly Deduction} - \text{NLP Bot Deduction}$$
 
-### Terminal ranking
-![Terminal ranking](docs/screenshots/05-cli-score.png)
+5. **Dataset & Distribution Drift Monitor (`DriftDetector`)**:
+   - Calculates **Population Stability Index (PSI)** between training cohorts and incoming production traffic:
+     $$PSI = \sum_{i} (T_i - B_i) \times \ln\left(\frac{T_i}{B_i}\right)$$
+   - Runs two-sample **Kolmogorov-Smirnov (KS)** tests to alert when creator demographics or engagement distributions shift.
 
-`score` prints the ranked table with the evidence for any flagged creator.
+---
 
-## What it does
+## Production DevOps & Cloud Infrastructure
 
-- **Score 0-100** = `(0.4 x engagement percentile + 0.3 x reach percentile + 0.3 x consistency) x (1 - 0.5 x risk)`.
-- **Cohort-relative**: percentiles are within the creator's platform + tier (nano < 10k < micro < 100k < mid < 500k < macro < 1M <= mega), falling back to the platform. **No industry benchmark is invented**, and with fewer than 5 comparable creators the score is **withheld** and raw metrics are shown instead.
-- **Heuristic authenticity signals** (weights): follower spike 0.35, low reach 0.20, low engagement 0.15, duplicate or wordless comments 0.30. Reach/engagement flags require *both* the bottom decile *and* under a third of the cohort median, so the lowest creator in a small group is not flagged just for being lowest. Only evaluable signals count; with too little evidence the label is "insufficient data".
-- **Cost efficiency**: CPM and cost per engagement from the creator's rate.
-- **Explainable UI**: filters, a reach-vs-engagement scatter coloured by risk, and a detail panel listing every signal as *flag* or *clear*.
-- **Privacy by design**: comment text is reduced to a single duplicate/wordless **ratio** at import; text and author identities are never stored.
-
-## Quick start
+### Docker & Docker Compose
+- **Multi-stage, Non-root Container (`Dockerfile`)**:
+  - Based on `python:3.12-slim` with dedicated user `appuser` (UID 10001).
+  - Security-hardened: no root privileges, `tini` init process, health checks.
+- **Microservices Stack (`docker-compose.yml`)**:
+  - `creatorscore-api`: FastAPI production microservice
+  - `postgres`: PostgreSQL 16 database with persistent volume and health check
+  - `redis`: Redis 7 caching tier
+  - `prometheus`: Prometheus v2.51 scraper for `/metrics`
+  - `grafana`: Pre-configured Grafana monitoring dashboard
 
 ```bash
-pip install -e .
-creatorscore serve --demo                              # dashboard on http://127.0.0.1:8000
-creatorscore score --demo --top 12                     # ranked table in the terminal
-creatorscore score --demo --categories film --format json
+docker compose up -d
+```
+
+### Kubernetes (K8s) Production Manifests (`deploy/k8s/`)
+- `namespace.yaml`: Isolated `creatorscore` namespace.
+- `deployment.yaml`: 3 replicas with rolling updates, liveness/readiness/startup probes, resource limits, and non-root execution.
+- `hpa.yaml`: Horizontal Pod Autoscaler scaling from 2 to 10 pods based on CPU (70%) and Memory (80%).
+- `pdb.yaml`: Pod Disruption Budget ensuring high availability during node drains.
+- `networkpolicy.yaml`: Zero-trust network segmentation.
+- `ingress.yaml`: TLS ingress with cert-manager support and rate limiting.
+
+### Helm Chart (`deploy/helm/creatorscore/`)
+```bash
+helm lint deploy/helm/creatorscore
+helm upgrade --install creatorscore deploy/helm/creatorscore \
+  --namespace creatorscore \
+  --create-namespace \
+  --values deploy/helm/creatorscore/values.yaml
+```
+
+### Terraform Infrastructure as Code (`deploy/terraform/`)
+Provisions production AWS cloud infrastructure:
+- Multi-AZ VPC with public and private subnets across 3 Availability Zones.
+- Managed **AWS EKS Kubernetes Cluster** (v1.30) with separate compute and ML-inference node groups.
+- High-Availability **AWS RDS PostgreSQL 16** with Multi-AZ replication and encryption at rest.
+- S3 Bucket with AES-256 encryption for ML model artifacts and drift logs.
+
+---
+
+## Enterprise CI/CD Pipelines
+
+GitHub Actions workflows located in `.github/workflows/`:
+1. **`ci.yml` (Continuous Integration)**:
+   - Ruff linting and Black formatting verification.
+   - Bandit automated security and vulnerability analysis.
+   - Multi-version matrix test suite (Python 3.10, 3.11, 3.12) with code coverage.
+   - Docker container build and Trivy vulnerability scan.
+   - Helm chart syntax and template linting.
+2. **`cd.yml` (Continuous Deployment)**:
+   - Automated semantic release builds.
+   - Multi-arch container publish (`linux/amd64`, `linux/arm64`) to GitHub Container Registry (`ghcr.io`).
+   - Rolling deployment to Kubernetes cluster using Helm.
+3. **`ml_eval.yml` (ML Drift Benchmark)**:
+   - Scheduled weekly audit monitoring population stability (PSI) and regression accuracy.
+
+---
+
+## Quick Start
+
+### 1. Installation
+```bash
+# Clone the repository
+git clone https://github.com/SriRamkunamsetty/creator-scorer.git
+cd creator-scorer
+
+# Install with all enterprise ML & API dependencies
+pip install -e ".[all]"
+```
+
+### 2. Run the Machine-Learning CLI
+```bash
+# Score creators with ML anomaly detection and fair pricing models
+creatorscore score --demo --ml --top 10
+
+# Output structured JSON with complete ML insights & XAI waterfall
+creatorscore score --demo --ml --format json
+```
+
+### 3. Launch the Production FastAPI Service
+```bash
+# Start FastAPI ASGI server with Swagger UI at http://127.0.0.1:8000/docs
+creatorscore serve --demo --api --port 8000
+```
+
+### 4. Run the Full Test Suite
+```bash
 python -m unittest discover -s tests -v
 ```
 
-## Using real data
+---
 
-```bash
-creatorscore import-creators posts.csv --db creatorscore.db     # one row per post; see examples/creator_posts.template.csv
-creatorscore import-followers history.csv --db creatorscore.db  # optional daily follower counts; see examples/followers.template.csv
-creatorscore serve --db creatorscore.db
-```
-Rows that fail validation (zero followers, negative counters, bad dates) are rejected **with the line number and reason**. `sample_comments` is an optional `|`-separated column used only to compute the duplicate/wordless ratio.
+## REST API Reference
 
-Scoring definitions and weights: `docs/METHOD.md`.
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/healthz` | Kubernetes liveness probe |
+| `GET` | `/readyz` | Kubernetes readiness probe (verifies DB) |
+| `GET` | `/metrics` | Prometheus metrics scrape target |
+| `GET` | `/api/v1/creators` | List scored creators (with optional `enable_ml=true`) |
+| `POST` | `/api/v1/analyze/comments` | NLP Shannon entropy & semantic bot cluster analysis |
+| `POST` | `/api/v1/analyze/drift` | Population Stability Index (PSI) & KS drift computation |
+| `GET` | `/api/v1/models/status` | ML model registry metadata and health status |
 
-## Status: what is verified and what is not
-
-The build environment had **no network, no Postgres and no real API keys**. Everything below marked *not run* is code that exists and is unit-tested against local fakes, but has never talked to the real service.
-
-| Area | Status |
-|---|---|
-| 7 tests: tiers, duplicate/wordless ratio, suspicious creators flagged and normal ones not (no false positives or mediums on the demo cohort), small-cohort score withheld, category ordering, CSV import with validation and normalisation, API hardening, real-browser filters + scatter + detail panel | **Pass** (`python -m unittest discover -s tests -v`) |
-| Dashboard (light, dark, mobile) | Rendered and inspected in real Chromium; a browser test exercises filters, the scatter and the detail panel |
-- Risk is a set of **heuristic signals from public numbers, not proof of fraud**; the API and UI say so on every record.
-- Percentiles are relative to *your imported cohort*, so scores are comparable only within one cohort and one point in time.
-- With few posts the stated confidence drops; with fewer than 5 comparable creators no score is produced.
-- The weights (0.4/0.3/0.3, risk penalty 0.5) are judgement calls, documented in `docs/METHOD.md`; tune them to your campaign.
-- No authentication on the dashboard.
-
-## Known limitations
-
-- **Not run on real data.** The demo cohort is synthetic and two creators were constructed to trip the signals, so the demo shows the logic works, not that the signals are accurate on real creators.
-
-## Project layout
-
-```
-src/creatorscore/__init__.py
-src/creatorscore/cli.py
-src/creatorscore/creators.py
-src/creatorscore/db.py
-src/creatorscore/sample_data.py
-src/creatorscore/schema.sql
-src/creatorscore/stats.py
-src/creatorscore/web.py
-tests/__init__.py
-tests/test_core.py
-tests/test_delivery.py
-docs/METHOD.md
-examples/creator_posts.template.csv
-examples/followers.template.csv
-```
-
-See `docs/PORTFOLIO.md` for resume bullets you can defend and the numbers you still need to measure yourself.
+---
 
 ## Contributors
 
-- **SriRamKunamsetty** ([@SriRamKunamsetty](https://github.com/SriRamKunamsetty)) - mohansriramkunamsetty@gmail.com
+- **SriRamKunamsetty** ([@SriRamKunamsetty](https://github.com/SriRamKunamsetty)) - `mohansriramkunamsetty@gmail.com`

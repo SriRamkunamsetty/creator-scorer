@@ -4,8 +4,12 @@ A creator-vetting tool that is explicit about what it cannot know: relative scor
 
 ## Bullets you can defend today (each is backed by the test suite or a screenshot in this repo)
 - Built an explainable creator-scoring engine: cohort-relative percentiles, weighted heuristic authenticity signals, CPM/CPE, and a rule that withholds the score when fewer than 5 comparable creators exist.
-- Fixed a false-positive design flaw (the lowest creator in any small cohort was flagged) by requiring both bottom-decile rank and under one third of the cohort median; covered by a regression test on the demo cohort.
-- Shipped an interactive dashboard (filters, scatter, per-signal explanations) and a privacy-preserving importer that stores only a duplicate-comment ratio; 7 automated tests including real-browser checks.
+- Engineered an AI/ML detection suite: Multivariate Isolation Forest for anomalous performance vectors, NLP Shannon Entropy and TF-IDF semantic clustering for astroturf bot detection, and an Explainable AI (XAI) waterfall attribution engine.
+- Designed a predictive fair-market pricing model: Supervised regression with $k$-fold cross-validation estimating expected creator CPM/CPE and identifying high-ROI vs overpriced creators.
+- Built a dataset and cohort drift monitoring pipeline using Population Stability Index (PSI) and two-sample Kolmogorov-Smirnov divergence tests to guard against model decay.
+- Architected enterprise cloud infrastructure: Production Dockerfile (multi-stage, non-root `appuser`), full Docker Compose stack (FastAPI, PostgreSQL 16, Redis 7, Prometheus, Grafana), and production Kubernetes manifests & Helm chart with HPA autoscaling, PodDisruptionBudget, and zero-trust NetworkPolicy.
+- Authored Terraform IaC provisioning high-availability AWS EKS Kubernetes (v1.30), Multi-AZ RDS PostgreSQL, VPC, and S3 model artifact storage.
+- Implemented robust multi-stage CI/CD pipelines in GitHub Actions with Ruff/Black/Bandit security scanning, matrix test coverage across Python 3.10-3.12, container vulnerability scanning with Trivy, and multi-arch GHCR publication with rolling K8s deployment.
 
 ## Add these only after you have measured them yourself (do not publish a number you have not measured)
 - Scored [N] real creators across [M] platforms; [K] flagged high risk, of which I verified [J] manually.

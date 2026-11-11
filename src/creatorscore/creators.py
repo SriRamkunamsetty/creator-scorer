@@ -111,7 +111,7 @@ def _raw(conn, c):
             "dup": sum(dups) / len(dups) if dups else None, "median_engagements": float(eng)}
 
 
-def score_creators(conn, categories=(), min_posts=6, min_cohort=5):
+def score_creators(conn, categories=(), min_posts=6, min_cohort=5, enable_ml=False):
     creators = conn.execute("SELECT id, handle, platform, category, followers, rate_usd FROM creators").fetchall()
     rows = []
     for c in creators:
@@ -158,4 +158,29 @@ def score_creators(conn, categories=(), min_posts=6, min_cohort=5):
                     "cost": {"cpm_usd": rate / (raw["median_views"] / 1000) if rate else None,
                              "cpe_usd": rate / raw["median_engagements"] if rate and raw["median_engagements"] else None},
                     "score": score, "fit": fit, "note": note})
-    return sorted(out, key=lambda r: (not r["fit"], r["score"] is None, -(r["score"] or 0)))
+
+    sorted_out = sorted(out, key=lambda r: (not r["fit"], r["score"] is None, -(r["score"] or 0)))
+
+    if enable_ml and sorted_out:
+        from .ml.anomaly_detector import CreatorAnomalyDetector
+        from .ml.predictive_scorer import PredictiveQualityScorer
+        from .ml.explainability import ModelExplainer
+
+        detector = CreatorAnomalyDetector()
+        anomalies = detector.fit_predict(sorted_out)
+
+        predictor = PredictiveQualityScorer()
+        predictor.fit_and_evaluate(sorted_out)
+        pricings = predictor.predict_creators(sorted_out)
+
+        for i, c in enumerate(sorted_out):
+            anom = anomalies[i] if i < len(anomalies) else {}
+            price = pricings[i] if i < len(pricings) else {}
+            explanation = ModelExplainer.explain_creator_score(c, anomaly_info=anom)
+            c["ml_insights"] = {
+                "anomaly": anom,
+                "predictive_pricing": price,
+                "explainability": explanation,
+            }
+
+    return sorted_out

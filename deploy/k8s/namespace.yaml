@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: creatorscore
+  labels:
+    app.kubernetes.io/name: creatorscore
+    app.kubernetes.io/part-of: creatorscore-platform

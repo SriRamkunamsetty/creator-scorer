@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: creatorscore-ingress
+  namespace: creatorscore
+  labels:
+    app.kubernetes.io/name: creatorscore
+    app.kubernetes.io/component: api
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+spec:
+  tls:
+    - hosts:
+        - api.creatorscore.internal
+      secretName: creatorscore-tls
+  rules:
+    - host: api.creatorscore.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: creatorscore-api-service
+                port:
+                  number: 80

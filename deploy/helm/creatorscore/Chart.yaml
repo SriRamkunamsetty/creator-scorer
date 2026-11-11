@@ -1,0 +1,16 @@
+apiVersion: v2
+name: creatorscore
+description: Enterprise Helm chart for CreatorScore AI/ML quality scoring and bot detection service
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - machine-learning
+  - creator-economy
+  - nlp
+  - anomaly-detection
+  - api
+maintainers:
+  - name: SriRamKunamsetty
+    email: mohansriramkunamsetty@gmail.com
+    url: https://github.com/SriRamKunamsetty

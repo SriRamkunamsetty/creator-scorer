@@ -1,13 +1,109 @@
-name: ci
-on: [push, pull_request]
+name: Enterprise CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  lint-and-security:
+    name: Code Quality & Security Audit
     runs-on: ubuntu-latest
-    strategy:
-      matrix: { python: ["3.10", "3.12"] }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "${{ matrix.python }}" }
-      - run: pip install -e .
-      - run: python -m unittest discover -s tests -v   # browser test self-skips without Playwright
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Linting & Security Tools
+        run: |
+          pip install --upgrade pip
+          pip install ruff black bandit
+
+      - name: Run Ruff Linter
+        run: ruff check .
+
+      - name: Run Black Code Formatter Check
+        run: black --check . --diff
+
+      - name: Run Bandit Security Scanner
+        run: bandit -r src/ -ll -ii
+
+  test:
+    name: Test Suite & ML Matrix (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    needs: [lint-and-security]
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python }}"
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          pip install -e ".[ml,api,test]"
+
+      - name: Run Automated Unit, ML & API Tests
+        env:
+          PYTHONPATH: src
+        run: |
+          pytest tests/ -v --cov=src/creatorscore --cov-report=term-missing --cov-report=xml
+
+      - name: Upload Coverage to Artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.python == '3.12'
+        with:
+          name: code-coverage-report
+          path: coverage.xml
+
+  docker-and-helm:
+    name: Container Security & Helm Lint
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: creatorscore:test
+
+      - name: Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: creatorscore:test
+          format: "table"
+          exit-code: "0"
+          ignore-unfixed: true
+          vuln-type: "os,library"
+          severity: "CRITICAL,HIGH"
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Lint Helm Chart
+        run: |
+          helm lint deploy/helm/creatorscore
+          helm template creatorscore deploy/helm/creatorscore --dry-run

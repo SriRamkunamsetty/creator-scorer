@@ -1,0 +1,29 @@
+name: ML Evaluation & Drift Benchmark
+
+on:
+  schedule:
+    - cron: "0 2 * * 1" # Every Monday at 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  ml-eval:
+    name: Model Drift & Calibration Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[ml,api,test]"
+
+      - name: Run ML Benchmark & Drift Tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pytest tests/test_ml.py -v
